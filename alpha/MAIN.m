@@ -47,25 +47,25 @@ try
     opt.game.fps = round(1/Screen('GetFlipInterval',scr));
     
     %% generate world
-    opt.world.x = scrSize(3)*opt.world.perc_x;
-    opt.world.y = scrSize(4)*opt.world.perc_y;
+    opt.world.px_x = scrSize(3)*opt.world.perc_x;
+    opt.world.px_y = scrSize(4)*opt.world.perc_y;
     
-    world(1,1) = scrSize(3)/2 - opt.world.x/2;   % left_line
-    world(3,1) = scrSize(3)/2 + opt.world.x/2;   % right_line
-    world(2,1) = scrSize(4)/2 - opt.world.y/2;   % top_line
-    world(4,1) = scrSize(4)/2 + opt.world.y/2;   % bottom_line
+    opt.world.frame(1,1) = scrSize(3)/2 - opt.world.px_x/2;   % left_line
+    opt.world.frame(3,1) = scrSize(3)/2 + opt.world.px_x/2;   % right_line
+    opt.world.frame(2,1) = scrSize(4)/2 - opt.world.px_y/2;   % top_line
+    opt.world.frame(4,1) = scrSize(4)/2 + opt.world.px_y/2;   % bottom_line
     
     % move lower boundery of world to generate some "ground"
-%     world(4,1) = world(4,1) + scrSize(4) * 0.04;    % add fraction of screen_height
-    world(4,1) = world(4,1) + 30;                   % add constant pixels
+%     opt.world.frame(4,1) = opt.world.frame(4,1) + scrSize(4) * 0.04;    % add fraction of screen_height
+    opt.world.frame(4,1) = opt.world.frame(4,1) + 30;                   % add constant pixels
     
     % some world_dependent y_coordinates of stuff
-    y.ground = scrSize(4)/2 + opt.world.y/2;
-    y.title = world(2,1)/2;
-    y.version = scrSize(4)-5;
+    opt.world.y.ground = scrSize(4)/2 + opt.world.px_y/2;
+    opt.world.y.title = opt.world.frame(2,1)/2;
+    opt.world.y.version = scrSize(4)-5;
     
     %% generate random landscape
-    [~,obstacles,landscape] = create_landscape(opt,world,y);
+    [~,obstacles,landscape] = create_landscape(opt);
     
     %% intro screen
     go_on = 0;
@@ -73,7 +73,7 @@ try
     blink_const = 0.5;
     while go_on == 0
         % draw world
-        draw_world(scr,opt,world,y,[])
+        draw_world(scr,opt,[],[])
         
         % insert coin
         Screen('TextStyle', scr, 0);
@@ -101,7 +101,7 @@ try
     %% countdown
     for t = 3:-1:1
         % draw world
-        draw_world(scr,opt,world,y,[]);
+        draw_world(scr,opt,[],[]);
         
         % countdown
         Screen('TextStyle', scr, 0);
@@ -116,7 +116,7 @@ try
     end
     
     %% GO GO GO
-    draw_world(scr,opt,world,y,[]);
+    draw_world(scr,opt,[],[]);
     Screen('TextSize', scr, opt.txt.size.coin + 20*(3-t));
     DrawFormattedText(scr, 'L O S', 'center',  'center', opt.color.white);
     Screen('Flip', scr);
@@ -125,29 +125,32 @@ try
     %% PLAY_TIME
     % init
     frame = 1;
-    waitframes = 1;
-    
-    % loop as long as "alive" and "not finished"
     alive = true;
     finish = false;
     
+    % loop as long as "alive" and "not finished"    
     vbl=Screen('Flip', scr);
     t_total = tic;
     while alive && ~finish
-        % draw world + landscape
-        draw_world(scr,opt,world,y,landscape.(['f' num2str(frame)]));
-
+        % fetch input
+%         [ ~, ~, keyCode ] = KbCheck;
+        
         % draw hero
+        hero = [];
+        
+        % draw world + landscape
+        draw_world(scr,opt,landscape.(['f' num2str(frame)]),hero);
         
         % check for collision
+        
+        % flip
+        vbl = Screen('Flip', scr, vbl + opt.game.fi * 0.5);
         
         % check if finished
         if frame == numel(fieldnames(landscape))
             finish = true;
+            pause(1);
         end
-        
-        % flip
-        vbl = Screen('Flip', scr, vbl + (waitframes - 0.5) * opt.game.fi);
         
         % next frame
         frame = frame + 1;
@@ -172,39 +175,10 @@ if wo_bin_ich == 1, ShowCursor; end
 Screen('CloseAll');
 
 
-%% sub_function *********************************************************************
-% ************************************************************************
-% *** plot world ***
-function draw_world(scr,opt,world,y,land)
-% title
-Screen('TextStyle', scr, 1);
-Screen('TextSize', scr, opt.txt.size.title);
-DrawFormattedText(scr, opt.txt.title, 'center',  y.title, opt.color.orange);
-
-% version
-Screen('TextStyle', scr, 0);
-Screen('TextSize', scr, opt.txt.size.version);
-DrawFormattedText(scr, opt.txt.version, 'right', y.version , opt.color.white);
-
-% filled frame
-Screen('FillRect', scr, opt.color.world, world);
-
-% landscape
-if isempty(land)
-    coord_x = [world(1) world(1) world(3) world(3)]';
-    coord_y = [world(4) y.ground y.ground world(4)]';
-    Screen('FillPoly',scr,opt.color.land,[coord_x,coord_y]);
-else
-    Screen('FillPoly',scr,opt.color.land,land);
-end
-
-% frame
-Screen('FrameRect', scr, opt.color.frame, world, 2);
-end
-
-% ************************************************************************
+%% ********* sub_functions *************************************************************************
+% *********************************************************************************
 % *** create landscape ***
-function [w, obs, w_poly] = create_landscape(opt,world,y)
+function [w, obs, w_poly] = create_landscape(opt)
 % calculate length in px
 L = opt.game.speed * opt.game.duration;
 
@@ -225,36 +199,81 @@ for i = 1:size(obs,1)
     w(obs(i,1):obs(i,2)) = obs(i,3);
 end
 
-% add margins left + right
-w = [zeros(1,opt.world.x) , w]; % , zeros(1,opt.world.x)];
+% add flat_line at start
+ww = [zeros(1,opt.world.px_x) , w];
 
 % convert landscape into xy-coordinates for each single frame
-nFrames = opt.game.duration * opt.game.fps;
 ppf = opt.game.speed / opt.game.fps;
+add = ceil( opt.world.px_x * (1-opt.hero.position_x) / ppf);
+nFrames = opt.game.duration * opt.game.fps + add;
 
 for f = 1:nFrames
     ix = (f) * ppf + 1;
-    iy = ix + opt.world.x - 1;
+    iy = ix + opt.world.px_x - 1;
     
-    tmp_landscape = w(ix:iy);
+    if numel(ww) < iy
+        nNaN = iy - numel(ww);
+        tmp_landscape = [ww(ix:end) ones(1,nNaN)*opt.world.px_y];
+        tmp_x = find(abs(diff( tmp_landscape ))) + 1;
+    else
+        tmp_landscape = ww(ix:iy);
+        tmp_x = find(abs(diff(tmp_landscape))) + 1;
+    end
     
-    
-    tmp_x = find(abs(diff(tmp_landscape))) + 1;
-    
-    coord_x = [world(1) ; world(1) ; nan(2*numel(tmp_x),1) ; world(3) ; world(3)];
-    coord_y = [world(4) ; y.ground - tmp_landscape(1) ; nan(2*numel(tmp_x),1) ; y.ground - tmp_landscape(end) ; world(4)];
+    coord_x = [opt.world.frame(1) ; opt.world.frame(1) ; nan(2*numel(tmp_x),1) ; opt.world.frame(3) ; opt.world.frame(3)];
+    coord_y = [opt.world.frame(4) ; opt.world.y.ground - tmp_landscape(1) ; nan(2*numel(tmp_x),1) ; opt.world.y.ground - tmp_landscape(end) ; opt.world.frame(4)];
     for j = 1:numel(tmp_x)
-        coord_x(2*j-1+2 : 2*j+2) = world(1) + tmp_x(j);
-        coord_y(2*j-1+2) = y.ground - tmp_landscape(tmp_x(j)-1);
-        coord_y(2*j+2) = y.ground - tmp_landscape(tmp_x(j));
+        coord_x(2*j-1+2 : 2*j+2) = opt.world.frame(1) + tmp_x(j);
+        coord_y(2*j-1+2) = opt.world.y.ground - tmp_landscape(tmp_x(j)-1);
+        coord_y(2*j+2) = opt.world.y.ground - tmp_landscape(tmp_x(j));
     end
     
     w_poly.(['f' num2str(f)]) = [coord_x,coord_y];
 end
 end
 
-% ************************************************************************
-% ****** QUIT ??? ******
+% *********************************************************************************
+% *** draw world ***
+function draw_world(scr,opt,land,hero)
+% title
+Screen('TextStyle', scr, 1);
+Screen('TextSize', scr, opt.txt.size.title);
+DrawFormattedText(scr, opt.txt.title, 'center',  opt.world.y.title, opt.color.orange);
+
+% version
+Screen('TextStyle', scr, 0);
+Screen('TextSize', scr, opt.txt.size.version);
+DrawFormattedText(scr, opt.txt.version, 'right', opt.world.y.version , opt.color.white);
+
+% filled frame
+Screen('FillRect', scr, opt.color.world, opt.world.frame);
+
+% landscape
+if isempty(land)
+    coord_x = [opt.world.frame(1) opt.world.frame(1) opt.world.frame(3) opt.world.frame(3)]';
+    coord_y = [opt.world.frame(4) opt.world.y.ground opt.world.y.ground opt.world.frame(4)]';
+    Screen('FillPoly',scr,opt.color.land,[coord_x,coord_y]);
+else
+    Screen('FillPoly',scr,opt.color.land,land);
+end
+
+% frame
+Screen('FrameRect', scr, opt.color.frame, opt.world.frame, 2);
+
+% hero
+if isempty(hero)
+    hero(1,1) = ceil((opt.world.px_x * opt.hero.position_x) + opt.world.frame(1) - (opt.hero.w / 2));
+    hero(2,1) = ceil(opt.world.y.ground - opt.hero.h);
+    hero(3,1) = ceil((opt.world.px_x * opt.hero.position_x) + opt.world.frame(1) + (opt.hero.w / 2));
+    hero(4,1) = ceil(opt.world.y.ground);
+    Screen('FillRect', scr, opt.hero.color, hero);
+else
+    DrawFormattedText(scr, 'hero is jumping', 'center', 'center', opt.color.orange);
+end
+end
+
+% *********************************************************************************
+% *** quit ??? ***
 function sub_quit(scr)
 DrawFormattedText(scr, 'abort', 'center', 'center', [255, 0, 0]);
 Screen('Flip', scr);

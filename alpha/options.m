@@ -7,21 +7,20 @@ opt.color.black = [0,0,0];
 opt.color.grey = [88,88,88];
 opt.color.white = [255,255,255];
 opt.color.orange = [255,102,0];
+opt.color.blue = [0,108,178];
 
 opt.color.background = opt.color.grey;
-opt.color.frame = opt.color.orange;
+opt.color.frame = opt.color.blue;
 opt.color.world = opt.color.black;
 opt.color.land = opt.color.white;
 
-% input 
-opt.keys.Up = 38;
-opt.keys.Return = 13;
-opt.keys.Space = 32;
-opt.keys.Quit = 81;     % press "q" to QUIT
-
 % game settings
-opt.game.duration = 10;  % seconds
+opt.game.duration = 3;  % seconds
 opt.game.speed = 200;     % px/sec
+
+% world
+opt.world.perc_x = .90; % world_width as % of sreen_width
+opt.world.perc_y = .70; % world_height as % of sreen_height
 
 % landscape
 opt.land.color = opt.color.white;
@@ -29,9 +28,11 @@ opt.land.dist = [100 300];   % intervall for distance between obstacles
 opt.land.h = [10 100];       % intervall for height of obstacles
 opt.land.w = [10 40];        % intervall for height of obstacles
 
-% world
-opt.world.perc_x = .90; % world_width as % of sreen_width
-opt.world.perc_y = .70; % world_height as % of sreen_height
+% hero
+opt.hero.color = opt.color.blue;
+opt.hero.position_x = (3-sqrt(5))/2;    % percentage of empty space left of HERO [ Goldener Schnitt = (3-sqrt(5))/2 ]
+opt.hero.w = 20;
+opt.hero.h = 40;
 
 % text
 opt.txt.title = 'nemoHack2020 : jump_n_run';
@@ -41,4 +42,10 @@ opt.txt.size.version = 10;
 opt.txt.size.title = 20;
 opt.txt.size.coin = 28;
 opt.txt.size.space = 20;
+
+% input 
+opt.keys.Up = 38;
+opt.keys.Return = 13;
+opt.keys.Space = 32;
+opt.keys.Quit = 81;     % press "q" to QUIT
 
