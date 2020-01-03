@@ -15,8 +15,8 @@ opt.color.world = opt.color.black;
 opt.color.land = opt.color.white;
 
 % game settings
-opt.game.duration = 3;  % seconds
-opt.game.speed = 200;     % px/sec
+opt.game.duration = 5;    % seconds
+opt.game.speed = 150;     % px/sec
 
 % world
 opt.world.perc_x = .90; % world_width as % of sreen_width
@@ -34,6 +34,7 @@ opt.hero.position_x = (3-sqrt(5))/2;    % percentage of empty space left of HERO
 opt.hero.w = 20;
 opt.hero.h = 40;
 
+
 % text
 opt.txt.title = 'nemoHack2020 : jump_n_run';
 opt.txt.coin = ' please insert coin \n\n\n press [space] to begin ';
@@ -48,4 +49,6 @@ opt.keys.Up = 38;
 opt.keys.Return = 13;
 opt.keys.Space = 32;
 opt.keys.Quit = 81;     % press "q" to QUIT
+opt.keys.jump = [49:57 48];  % 48 = "0"  -->  57 = "9"
+
 

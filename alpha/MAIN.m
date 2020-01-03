@@ -6,7 +6,11 @@ wo_bin_ich = 3;     % 1 = EXPERIMENT --> ein Screen
                     % 2 = Büro, 2 Screens, Experiment auf Laptop
                     % 3 = Laptop, Experiment in kleinem Fenster
 
+debug = true;
 
+if debug
+    tmp_debug1 = false;
+end
 
 %% loading stuff
 opt = options();
@@ -42,10 +46,11 @@ try
     Screen('TextStyle', scr, 0);
     ListenChar(2);
     
-    % get flip_intervall + fps for current screen
+    % get "flip_intervall" + "fps" for current screen + calculate "pixels per frame"
     opt.game.fi = Screen('GetFlipInterval',scr);    
     opt.game.fps = round(1/Screen('GetFlipInterval',scr));
-    
+    opt.game.ppf = opt.game.speed / opt.game.fps;
+
     %% generate world
     opt.world.px_x = scrSize(3)*opt.world.perc_x;
     opt.world.px_y = scrSize(4)*opt.world.perc_y;
@@ -73,7 +78,7 @@ try
     blink_const = 0.5;
     while go_on == 0
         % draw world
-        draw_world(scr,opt,[],[])
+        draw_world(scr,opt,[],0)
         
         % insert coin
         Screen('TextStyle', scr, 0);
@@ -101,7 +106,7 @@ try
     %% countdown
     for t = 3:-1:1
         % draw world
-        draw_world(scr,opt,[],[]);
+        draw_world(scr,opt,[],0);
         
         % countdown
         Screen('TextStyle', scr, 0);
@@ -112,11 +117,11 @@ try
         Screen('Flip', scr);
         
         % waiting a sec
-        pause(1);
+        pause(.5);
     end
     
     %% GO GO GO
-    draw_world(scr,opt,[],[]);
+    draw_world(scr,opt,[],0);
     Screen('TextSize', scr, opt.txt.size.coin + 20*(3-t));
     DrawFormattedText(scr, 'L O S', 'center',  'center', opt.color.white);
     Screen('Flip', scr);
@@ -127,25 +132,90 @@ try
     frame = 1;
     alive = true;
     finish = false;
+    airtime = false;
     
+    % jumping parameters
+    opt.jump.maxL = opt.land.w(2) * 2;
+    opt.jump.maxH = opt.world.y.ground - opt.world.frame(2) - opt.hero.h;
+    
+    % personal maximum F  ********** !!! needs to be collected at beginning !!! **********
+    opt.jump.maxF = 1200;
+
     % loop as long as "alive" and "not finished"    
     vbl=Screen('Flip', scr);
     t_total = tic;
     while alive && ~finish
         % fetch input
-%         [ ~, ~, keyCode ] = KbCheck;
+        [ ~, ~, keyCode ] = KbCheck;
         
-        % draw hero
-        hero = [];
+        % this jump will be precalculated, based on input value
+        if ~airtime && any(keyCode(opt.keys.jump))
+            
+            % get Force in order to calculate height of jump
+            jump.F = find(keyCode(opt.keys.jump))/10 * opt.jump.maxF;       % !!! update with FORCEPLATE !!!
+                
+            % mapping of FORCE to HEIGHT and LENGTH of jump
+%             jump.L = opt.jump.maxL * (jump.F / opt.jump.maxF);    % linear mapping
+            jump.L = opt.land.w(2)*3;                                 % constant mapping
+            jump.H = opt.jump.maxH * (jump.F / opt.jump.maxF);      % linear mapping
+            
+            % fit parameters for parabel-like movement
+            jump.fitp = polyfit( [0 jump.L/2 jump.L] , [0 jump.H 0] , 2);
+            
+            % evaluate height for each timestep
+            jump.y = polyval(jump.fitp , 0:opt.game.ppf:jump.L);
+            
+            % set airtime
+            airtime = true;
+            airframe = 1;
+            
+            if debug
+                disp(['F = ' num2str(jump.F) ' - L = ' num2str(jump.L) ' px']);
+                disp(['starting frame = ' num2str(frame)]);
+                tmp_debug1 = true;
+            end
+        end
+        
+        % end airtime 
+        if airtime && airframe > numel(jump.y)
+            airtime = false;
+            if debug
+                disp(['landing frame = ' num2str(frame)]);
+                tmp_debug1 = false;
+            end
+        end
+        
+        % fetch height of hero for this frame, if height is positiv
+        if airtime %&& jump.y(airframe) > 0     % only when there is really a positiv height
+            hero = jump.y(airframe);
+            airframe = airframe + 1;
+        else
+            hero = 0;
+        end
         
         % draw world + landscape
         draw_world(scr,opt,landscape.(['f' num2str(frame)]),hero);
         
-        % check for collision
+        % visual debugging information
+        if debug
+            % draw debug-line each 10 frames [10:10:end]
+            tmp123 = (10:10:opt.world.px_x) - (mod(frame,10)) * opt.game.ppf + opt.world.frame(1);
+            for tmp = tmp123
+                Screen('DrawLine', scr, [255 108 0], tmp, opt.world.y.ground, tmp, opt.world.y.ground-20 ,1);
+            end
         
+            if tmp_debug1
+                tmp_xx = ceil((opt.world.px_x * opt.hero.position_x) + opt.world.frame(1) - (opt.hero.w / 2));
+                tmp_x = tmp_xx - (airframe-2)*opt.game.ppf;
+                Screen('DrawLine', scr, [0 255 108], tmp_x, opt.world.y.ground, tmp_x, opt.world.y.ground-40 ,1);
+            end
+        end
+            
         % flip
         vbl = Screen('Flip', scr, vbl + opt.game.fi * 0.5);
         
+        % check for collision
+
         % check if finished
         if frame == numel(fieldnames(landscape))
             finish = true;
@@ -203,12 +273,11 @@ end
 ww = [zeros(1,opt.world.px_x) , w];
 
 % convert landscape into xy-coordinates for each single frame
-ppf = opt.game.speed / opt.game.fps;
-add = ceil( opt.world.px_x * (1-opt.hero.position_x) / ppf);
+add = ceil( opt.world.px_x * (1-opt.hero.position_x) / opt.game.ppf);
 nFrames = opt.game.duration * opt.game.fps + add;
 
 for f = 1:nFrames
-    ix = (f) * ppf + 1;
+    ix = (f) * opt.game.ppf + 1;
     iy = ix + opt.world.px_x - 1;
     
     if numel(ww) < iy
@@ -234,7 +303,7 @@ end
 
 % *********************************************************************************
 % *** draw world ***
-function draw_world(scr,opt,land,hero)
+function draw_world(scr,opt,land,height)
 % title
 Screen('TextStyle', scr, 1);
 Screen('TextSize', scr, opt.txt.size.title);
@@ -261,15 +330,12 @@ end
 Screen('FrameRect', scr, opt.color.frame, opt.world.frame, 2);
 
 % hero
-if isempty(hero)
-    hero(1,1) = ceil((opt.world.px_x * opt.hero.position_x) + opt.world.frame(1) - (opt.hero.w / 2));
-    hero(2,1) = ceil(opt.world.y.ground - opt.hero.h);
-    hero(3,1) = ceil((opt.world.px_x * opt.hero.position_x) + opt.world.frame(1) + (opt.hero.w / 2));
-    hero(4,1) = ceil(opt.world.y.ground);
-    Screen('FillRect', scr, opt.hero.color, hero);
-else
-    DrawFormattedText(scr, 'hero is jumping', 'center', 'center', opt.color.orange);
-end
+hero(1,1) = ceil((opt.world.px_x * opt.hero.position_x) + opt.world.frame(1) - (opt.hero.w / 2));
+hero(2,1) = ceil(opt.world.y.ground - opt.hero.h - height);
+hero(3,1) = ceil((opt.world.px_x * opt.hero.position_x) + opt.world.frame(1) + (opt.hero.w / 2));
+hero(4,1) = ceil(opt.world.y.ground - height);
+
+Screen('FillRect', scr, opt.hero.color, hero);
 end
 
 % *********************************************************************************
