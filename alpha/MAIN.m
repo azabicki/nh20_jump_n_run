@@ -6,9 +6,10 @@ wo_bin_ich = 3;     % 1 = EXPERIMENT --> ein Screen
                     % 2 = Büro, 2 Screens, Experiment auf Laptop
                     % 3 = Laptop, Experiment in kleinem Fenster
 
-debug = true;
+%% debug modus anschalten um dann mehr informationen auf dem screnn angezeigt zu bekommen
+debug = false;
 
-if debug
+if debug == true
     tmp_debug1 = false;
 end
 
@@ -38,7 +39,7 @@ try
             [scr, scrSize] = Screen('OpenWindow',0,opt.color.background);        % das EIGENTLICH EXPERIMENT, nur ein Screen
             HideCursor;
         case 2
-            [scr, scrSize] = Screen('OpenWindow',2,opt.color.background);        % im Büro auf dem 2nd Screen
+            [scr, scrSize] = Screen('OpenWindow',1,opt.color.background);        % im Büro auf dem 2nd Screen
         case 3
             tmpx = 950; tmpy = 180;
             [scr, scrSize] = Screen('OpenWindow',0,opt.color.background,[tmpx tmpy 640+tmpx 360+tmpy]);   % zu hause NUR am laptop
@@ -68,6 +69,11 @@ try
     opt.world.y.ground = scrSize(4)/2 + opt.world.px_y/2;
     opt.world.y.title = opt.world.frame(2,1)/2;
     opt.world.y.version = scrSize(4)-5;
+    
+	% calculate x-position in pixels of hero, necessary for collision detection
+    opt.hero.location_on_x(1,1) = ceil((opt.world.px_x * opt.hero.position_x) + opt.world.frame(1) - (opt.hero.w / 2));
+    opt.hero.location_on_x(1,2) = ceil((opt.world.px_x * opt.hero.position_x) + opt.world.frame(1) + (opt.hero.w / 2));
+
     
     %% generate random landscape
     [~,obstacles,landscape] = create_landscape(opt);
@@ -145,10 +151,10 @@ try
     vbl=Screen('Flip', scr);
     t_total = tic;
     while alive && ~finish
-        % fetch input
-        [ ~, ~, keyCode ] = KbCheck;
+        % fetch input -> actually it is a keystroke from 1 -> 0, determining the power of the jump
+        [ ~, ~, keyCode] = KbCheck;
         
-        % this jump will be precalculated, based on input value
+        % this jump will be pre-calculated, based on input value
         if ~airtime && any(keyCode(opt.keys.jump))
             
             % get Force in order to calculate height of jump
@@ -165,11 +171,14 @@ try
             % evaluate height for each timestep
             jump.y = polyval(jump.fitp , 0:opt.game.ppf:jump.L);
             
-            % set airtime
-            airtime = true;
-            airframe = 1;
+            % fixing values lower zero
+            jump.y(jump.y < 0) = 0;
             
-            if debug
+            % set airtime==true, when hero starts jumping
+            airtime = true;
+            airframe = 1;   % air_frame to know, which timepoint of the jump to plot
+            
+            if debug == true
                 disp(['F = ' num2str(jump.F) ' - L = ' num2str(jump.L) ' px']);
                 disp(['starting frame = ' num2str(frame)]);
                 tmp_debug1 = true;
@@ -179,7 +188,7 @@ try
         % end airtime 
         if airtime && airframe > numel(jump.y)
             airtime = false;
-            if debug
+            if debug == true
                 disp(['landing frame = ' num2str(frame)]);
                 tmp_debug1 = false;
             end
@@ -196,17 +205,17 @@ try
         % draw world + landscape
         draw_world(scr,opt,landscape.(['f' num2str(frame)]),hero);
         
-        % visual debugging information
-        if debug
+        % visual debugging information      *** ATTENTION : BUGGY ***
+        if debug == true
             % draw debug-line each 10 frames [10:10:end]
-            tmp123 = (10:10:opt.world.px_x) - (mod(frame,10)) * opt.game.ppf + opt.world.frame(1);
+            tmp123 = (10:10:opt.world.px_x) - round(mod(frame,10) * opt.game.ppf) + opt.world.frame(1);
             for tmp = tmp123
                 Screen('DrawLine', scr, [255 108 0], tmp, opt.world.y.ground, tmp, opt.world.y.ground-20 ,1);
             end
         
             if tmp_debug1
                 tmp_xx = ceil((opt.world.px_x * opt.hero.position_x) + opt.world.frame(1) - (opt.hero.w / 2));
-                tmp_x = tmp_xx - (airframe-2)*opt.game.ppf;
+                tmp_x = tmp_xx - round((airframe-2)*opt.game.ppf);
                 Screen('DrawLine', scr, [0 255 108], tmp_x, opt.world.y.ground, tmp_x, opt.world.y.ground-40 ,1);
             end
         end
@@ -215,6 +224,7 @@ try
         vbl = Screen('Flip', scr, vbl + opt.game.fi * 0.5);
         
         % check for collision
+        alive = collision_detection(opt, landscape.(['f' num2str(frame)]), hero, alive);
 
         % check if finished
         if frame == numel(fieldnames(landscape))
@@ -226,7 +236,10 @@ try
         frame = frame + 1;
     end
     duration = toc(t_total);
-        
+    
+    %% first scrren after ending: dead or alive?
+    
+    
     %% good-bye screen
     Screen('TextSize', scr, opt.txt.size.coin);
     DrawFormattedText(scr, '***   G A M E   O V E R   ***', 'center', 'center', opt.color.white);
@@ -277,17 +290,16 @@ add = ceil( opt.world.px_x * (1-opt.hero.position_x) / opt.game.ppf);
 nFrames = opt.game.duration * opt.game.fps + add;
 
 for f = 1:nFrames
-    ix = (f) * opt.game.ppf + 1;
+    ix = round(f * opt.game.ppf) + 1;
     iy = ix + opt.world.px_x - 1;
     
-    if numel(ww) < iy
+    if numel(ww) < iy % add WALL at end
         nNaN = iy - numel(ww);
         tmp_landscape = [ww(ix:end) ones(1,nNaN)*opt.world.px_y];
-        tmp_x = find(abs(diff( tmp_landscape ))) + 1;
-    else
+    else % cutout picture for frame out of world
         tmp_landscape = ww(ix:iy);
-        tmp_x = find(abs(diff(tmp_landscape))) + 1;
     end
+    tmp_x = find(abs(diff(tmp_landscape))) + 1;
     
     coord_x = [opt.world.frame(1) ; opt.world.frame(1) ; nan(2*numel(tmp_x),1) ; opt.world.frame(3) ; opt.world.frame(3)];
     coord_y = [opt.world.frame(4) ; opt.world.y.ground - tmp_landscape(1) ; nan(2*numel(tmp_x),1) ; opt.world.y.ground - tmp_landscape(end) ; opt.world.frame(4)];
@@ -336,6 +348,19 @@ hero(3,1) = ceil((opt.world.px_x * opt.hero.position_x) + opt.world.frame(1) + (
 hero(4,1) = ceil(opt.world.y.ground - height);
 
 Screen('FillRect', scr, opt.hero.color, hero);
+end
+
+% *********************************************************************************
+% *** collision detection ***
+function alive = collision_detection(opt, land, hero, alive)
+% get height of interessting landmarks
+land_h(1) = opt.world.y.ground - land(find( land(:,1) < opt.hero.location_on_x(1,1),1,'last'),2);
+land_h(2) = opt.world.y.ground - land(find( land(:,1) > opt.hero.location_on_x(1,2),1,'first'),2);
+
+% checking
+if any(hero < land_h)
+    alive = false;
+end
 end
 
 % *********************************************************************************

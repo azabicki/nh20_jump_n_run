@@ -1,6 +1,6 @@
 %% options and settings 4 nh20_jnrKMP
 function opt = options()
-opt.txt.version = 'v0.1 / 01.01.20';
+opt.txt.version = 'v0.2 / 09.02.20';
 
 % colors
 opt.color.black = [0,0,0];
@@ -15,8 +15,8 @@ opt.color.world = opt.color.black;
 opt.color.land = opt.color.white;
 
 % game settings
-opt.game.duration = 5;    % seconds
-opt.game.speed = 150;     % px/sec
+opt.game.duration = 10;    % seconds
+opt.game.speed = 200;     % px/sec
 
 % world
 opt.world.perc_x = .90; % world_width as % of sreen_width
@@ -36,7 +36,7 @@ opt.hero.h = 40;
 
 
 % text
-opt.txt.title = 'nemoHack2020 : jump_n_run';
+opt.txt.title = 'nh20 : jump_n_run';
 opt.txt.coin = ' please insert coin \n\n\n press [space] to begin ';
 opt.txt.space = 'weiter mit [Leertaste]';
 opt.txt.size.version = 10;
