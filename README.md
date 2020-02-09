@@ -8,17 +8,20 @@ game is running on MATLAB and output is displayed via Psychtoolbox
 our mobile forceplate is controlled via in-house-software on the raspberry pi
 
 ## what is running
- - v0.1
+ - v0.2 (09.02.2020)
+   - jumping is implemented (keystroke)
+   - collision detection
+   - now with all kind of monitor_framerates
+
+ - v0.1 (03.01.2020)
    - welcome screen
    - countdown
    - landscape is automatically *side_scrolling* till end
 
 ## todo
- - add "Auslaufbereich" to landscape
- - generate and draw a **hero**
  - implement forceplate
-   - [ ] connect
-   - [ ] fetch data
- - implement *physics*: define how hero is acting, depending on input data from forceplate
- - implement *collision detetion*
+   - connect
+   - fetch data
+ - finetuning *physics*: define how hero is acting, depending on input data from forceplate
+ - ending_screens
 
