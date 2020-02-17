@@ -21,7 +21,13 @@ our mobile forceplate is controlled via in-house-software on the raspberry pi
 ## todo
  - implement forceplate
    - connect
+   - calibrate
    - fetch data
+   - calculate data/jump
  - finetuning *physics*: define how hero is acting, depending on input data from forceplate
+ - intro_screens
+   - e.g. multiplayer, aks for name,...
  - ending_screens
+ - calculate some sort of "Score"
+ - high_score list??
 
