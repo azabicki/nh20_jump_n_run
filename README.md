@@ -1,5 +1,5 @@
 ### nemoHack2020 project
-## jump'n'run on a forceplate
+## jump'n'run (on a forceplate)
 
 coding a simple jump'n'run game using the mobile forceplate as the input device
 
@@ -11,7 +11,7 @@ our mobile forceplate is controlled via in-house-software on the raspberry pi
  - v0.2 (09.02.2020)
    - jumping is implemented (keystroke)
    - collision detection
-   - now with all kind of monitor_framerates
+   - works now with all kind of monitor_framerates
 
  - v0.1 (03.01.2020)
    - welcome screen
