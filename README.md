@@ -7,6 +7,10 @@ game is running on MATLAB and output is displayed via Psychtoolbox
 
 our mobile forceplate is controlled via in-house-software on the raspberry pi
 
+## folders
+ - code: here is the main code linving and awaiting guests
+ - az: just a personal copy for az
+ 
 ## what is running
  - v0.2 (09.02.2020)
    - jumping is implemented (keystroke)
