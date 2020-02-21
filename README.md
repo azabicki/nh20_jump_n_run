@@ -18,6 +18,9 @@ our mobile forceplate is controlled via in-house-software on the raspberry pi
    - countdown
    - landscape is automatically *side_scrolling* till end
 
+## known bugs
+ - debug_lines are NOT correct
+
 ## todo
  - implement forceplate
    - connect
